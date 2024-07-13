@@ -56,7 +56,7 @@ _Many packages for SLURM and CUDA require the EPEL repository_
    subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
    dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
    ```
--Rocky 8:
+- Rocky 8:
    ```shell
    dnf config-manager --set-enabled powertools
    dnf install epel-release
