@@ -43,10 +43,11 @@ _This assumes the SLURM head node is a VM with a separate 200G disk for SLURM ac
 
    ⚠️ WARNING: change mypassword to something secure
 ```sql
+create database slurm_acct_db;
 grant all on slurm_acct_db.* TO 'slurm'@'localhost' identified by 'mypassword' with grant option;
 SHOW GRANTS;
 SHOW VARIABLES LIKE 'have_innodb';
-create database slurm_acct_db;
+flush privileges;
 ```
 
 ## EPEL
@@ -56,7 +57,7 @@ _Many packages for SLURM and CUDA require the EPEL repository_
    subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
    dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
    ```
-- Rocky 8:
+-Rocky 8:
    ```shell
    dnf config-manager --set-enabled powertools
    dnf install epel-release
@@ -105,10 +106,11 @@ _While SLURM doesn't explicitly require synced home directories, users will like
       export CUDA_LIB_PATH=/usr/local/cuda-12.2/lib64
       ```
   - To enable Infiniband-based multi-node MPI workloads, install and load [HPC-X](https://docs.nvidia.com/networking/display/hpcxv2171/installing+and+loading+hpc-x)
+    - Extract to /opt/hpcx
     - Add to root's `.bashrc`, changing the path to your version
         ```text
         # Load HPC-X
-        source /root/hpcx-v2.18-gcc-inbox-redhat8-cuda12-x86_64/hpcx-init.sh
+        source /opt/hpcx/hpcx-v2.18.1-gcc-inbox-redhat8-cuda12-x86_64/hpcx-init.sh
         hpcx_load
         ```
   - To enable IP-based multi-node MPI workloads, install `openmpi` and ensure its binaries are in your path (they're not by default)
@@ -235,7 +237,13 @@ _SlurmDBD is Slurm's Database daemon, which is responsible for communicating bet
    chown slurm /etc/slurm/slurmdbd.conf
    chmod 600 /etc/slurm/slurmdbd.conf
    ```
-4. Test the database connection:
+4. Create log directory and initial files:
+    ```shell
+    mkdir /var/log/slurm
+    touch /var/log/slurm/slurmdbd.log
+    chown slurm: /var/log/slurm/slurmdbd.log
+    ```
+5. Test the database connection:
    ```shell
    slurmdbd -D
    ```
@@ -334,6 +342,7 @@ _SlurmDBD is Slurm's Database daemon, which is responsible for communicating bet
    ```text
    NodeName=node[01-03] CPUs=64 Boards=1 SocketsPerBoard=2 CoresPerSocket=32 ThreadsPerCore=2 RealMemory=1024000
    ```
+    - If your environment resolvees host addresses to something other than their host IPs (in the case of NAT), then add `NodeAddr=` to each host.
 3. Setup the Partition(s)
    - Example basic partition:
      ```text
@@ -404,11 +413,11 @@ Add firewall exceptions for intra-cluster communication, depending on RHEL versi
 ## Start & Test Slurm
 1. Enable and start the Slurm master on the head node:
    ```shell
-   systemctl enable slurmctld.service; systemctl start slurmctld.service; systemctl status slurmctld.service
+   systemctl enable slurmctld.service --now; systemctl status slurmctld.service
    ```
 2. Enable and start the Slurm daemons on all compute hosts:
 ```shell
-systemctl enable slurmd.service; systemctl start slurmd.service; systemctl status slurmd.service
+systemctl enable slurmd.service --now; systemctl status slurmd.service
 ```
 3. Test the cluster (# is the number of compute hosts in the cluster)
    ```shell
